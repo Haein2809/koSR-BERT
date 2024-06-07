@@ -33,9 +33,9 @@ class NUGModel(torch.nn.Module):
             loss = loss_fct(active_logits, active_labels)
         return loss, logits
 
-class MURModel(torch.nn.Module):
+class MURModel(nn.Module):
     def __init__(self, model_name):
-        super(MUR, self).__init__()
+        super(MURModel, self).__init__()
         self.bert = BertForMaskedLM.from_pretrained(model_name)
 
     def forward(self, input_ids, attention_mask, labels=None):
