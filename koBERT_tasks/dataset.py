@@ -82,7 +82,6 @@ class MURDataset(Dataset):
         )
 
         input_ids = encoding['input_ids'].squeeze()
-        input_ids_nomask = input_ids.clone()
         attention_mask = encoding['attention_mask'].squeeze()
         target_ids = input_ids.clone()
 
@@ -105,7 +104,6 @@ class MURDataset(Dataset):
             target_ids[:] = -100
 
         return {
-            'input_ids_nomask': input_ids_nomask,
             'input_ids': input_ids,
             'attention_mask': attention_mask,
             'labels': target_ids
