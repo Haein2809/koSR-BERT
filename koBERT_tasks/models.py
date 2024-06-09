@@ -60,22 +60,21 @@ class DORNModel(torch.nn.Module):
 
 
 class EmbeddingEnhancedModel(nn.Module):
-    def __init__(self, model_name, tf_idf_words, bert_class):
+    def __init__(self, model_name, tf_idf_words):
         super(EmbeddingEnhancedModel, self).__init__()
-        self.bert = bert_class.from_pretrained(model_name)
         self.tokenizer = KoBERTTokenizer.from_pretrained(model_name)
         self.tf_idf_words = tf_idf_words
-        self.update_sentencepiece_model()
+        self.bert = self.initialize_bert(model_name)
 
         # 기존 임베딩 가중치 로드
         old_embeddings = self.bert.get_input_embeddings().weight.data
 
-        # 추가 서브워드를 포함하는 새로운 임베딩 층 생성
+        # 추가 단어를 포함하는 새로운 임베딩 층 생성
         new_vocab_size = old_embeddings.size(0) + len(tf_idf_words)
         new_embedding_dim = old_embeddings.size(1)
 
         # 기존 임베딩으로 새로운 임베딩 층 초기화
-        new_embeddings = torch.nn.Embedding(new_vocab_size, new_embedding_dim)
+        new_embeddings = nn.Embedding(new_vocab_size, new_embedding_dim)
         new_embeddings.weight.data[:old_embeddings.size(0)] = old_embeddings
 
         # 새로운 단어 임베딩 초기화 (랜덤 가중치 부여)
@@ -89,36 +88,20 @@ class EmbeddingEnhancedModel(nn.Module):
         self.tokenizer.add_tokens(tf_idf_words)
         self.bert.resize_token_embeddings(len(self.tokenizer))
 
-    def update_sentencepiece_model(self):
-        # SentencePiece 모델 로드
-        sp_model_path = self.tokenizer.vocab_file
-        sp = spm.SentencePieceProcessor()
-        sp.Load(sp_model_path)
-
-        # 기존 모델에 새로운 단어 추가
-        with open('tf_idf_words.txt', 'w') as f:
-            for word in self.tf_idf_words:
-                f.write(f"{word}\n")
-
-        new_vocab_size = len(sp) + len(self.tf_idf_words)
-        spm.SentencePieceTrainer.Train(
-            f'--input=tf_idf_words.txt --model_prefix=new_sp_model --vocab_size={new_vocab_size} --user_defined_symbols={",".join(self.tf_idf_words)}'
-        )
-
-        # 새롭게 생성된 SentencePiece 모델 로드
-        new_sp = spm.SentencePieceProcessor()
-        new_sp.Load('new_sp_model.model')
-        self.tokenizer.sp = new_sp
-        self.tokenizer.vocab_file = 'new_sp_model.model'
+    def initialize_bert(self, model_name):
+        raise NotImplementedError("Each subclass must implement this method.")
 
     def forward(self, input_ids, attention_mask, labels=None):
         raise NotImplementedError("Each subclass must implement this method.")
 
 class NUGEModel(EmbeddingEnhancedModel):
     def __init__(self, model_name, num_labels, tf_idf_words):
-        super(NUGEModel, self).__init__(model_name, tf_idf_words, BertModel)
+        super(NUGEModel, self).__init__(model_name, tf_idf_words)
         self.drop = nn.Dropout(p=0.3)
         self.out = nn.Linear(self.bert.config.hidden_size, num_labels)
+
+    def initialize_bert(self, model_name):
+        return BertModel.from_pretrained(model_name)
 
     def forward(self, input_ids, attention_mask, labels=None):
         outputs = self.bert(
@@ -143,7 +126,10 @@ class NUGEModel(EmbeddingEnhancedModel):
 
 class MUREModel(EmbeddingEnhancedModel):
     def __init__(self, model_name, tf_idf_words):
-        super(MUREModel, self).__init__(model_name, tf_idf_words, BertForMaskedLM)
+        super(MUREModel, self).__init__(model_name, tf_idf_words)
+
+    def initialize_bert(self, model_name):
+        return BertForMaskedLM.from_pretrained(model_name)
 
     def forward(self, input_ids, attention_mask, labels=None):
         outputs = self.bert(
@@ -157,9 +143,12 @@ class MUREModel(EmbeddingEnhancedModel):
 
 class DORNEModel(EmbeddingEnhancedModel):
     def __init__(self, model_name, num_labels, tf_idf_words):
-        super(DORNEModel, self).__init__(model_name, tf_idf_words, BertForSequenceClassification)
+        super(DORNEModel, self).__init__(model_name, tf_idf_words)
         self.config = BertConfig.from_pretrained(model_name, num_labels=num_labels)
         self.bert = BertForSequenceClassification.from_pretrained(model_name, config=self.config)
+
+    def initialize_bert(self, model_name):
+        return BertForSequenceClassification.from_pretrained(model_name)
 
     def forward(self, input_ids, attention_mask, labels=None):
         outputs = self.bert(input_ids, attention_mask=attention_mask, labels=labels)
