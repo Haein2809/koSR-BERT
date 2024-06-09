@@ -1,63 +1,8 @@
-
 import torch
 import torch.nn as nn
-from transformers import BertModel, BertForMaskedLM, BertForSequenceClassification, BertConfig
-from kobert_tokenizer import KoBERTTokenizer
 import sentencepiece as spm
-
-class NUGModel(torch.nn.Module):
-    def __init__(self, model_name, num_labels):
-        super(NUGModel, self).__init__()
-        self.bert = BertModel.from_pretrained(model_name)
-        self.drop = torch.nn.Dropout(p=0.3)
-        self.out = torch.nn.Linear(self.bert.config.hidden_size, num_labels)
-
-    def forward(self, input_ids, attention_mask, labels=None):
-        outputs = self.bert(
-            input_ids=input_ids,
-            attention_mask=attention_mask
-        )
-        sequence_output = outputs.last_hidden_state  # (batch_size, seq_len, hidden_size)
-        sequence_output = self.drop(sequence_output)
-        logits = self.out(sequence_output)  # (batch_size, seq_len, num_labels)
-
-        loss = None
-        if labels is not None:
-            loss_fct = torch.nn.CrossEntropyLoss()
-            # 마스킹된 위치에 대한 로스만 계산
-            active_loss = attention_mask.view(-1) == 1
-            active_logits = logits.view(-1, logits.size(-1))
-            active_labels = torch.where(
-                active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
-            )
-            loss = loss_fct(active_logits, active_labels)
-        return loss, logits
-
-class MURModel(torch.nn.Module):
-    def __init__(self, model_name):
-        super(MURModel, self).__init__()
-        self.bert = BertForMaskedLM.from_pretrained(model_name)
-
-    def forward(self, input_ids, attention_mask, labels=None):
-        outputs = self.bert(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=labels
-        )
-        loss = outputs.loss
-        logits = outputs.logits
-        return loss, logits
-
-class DORNModel(torch.nn.Module):
-    def __init__(self, model_name, num_labels):
-        super(DORNModel, self).__init__()
-        self.config = BertConfig.from_pretrained(model_name, num_labels=num_labels)
-        self.bert = BertForSequenceClassification.from_pretrained(model_name, config=self.config)
-
-    def forward(self, input_ids, attention_mask):
-        outputs = self.bert(input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-        return logits
+from transformers import BertModel, BertForMaskedLM, BertForSequenceClassification, BertConfig, AdamW
+from kobert_tokenizer import KoBERTTokenizer
 
 class EmbeddingEnhancedModel(nn.Module):
     def __init__(self, model_name, tf_idf_words, bert_class):
@@ -91,24 +36,25 @@ class EmbeddingEnhancedModel(nn.Module):
 
     def update_sentencepiece_model(self):
         # SentencePiece 모델 로드
-        sp_model_path = self.tokenizer.pretrained_vocab_files_map['vocab_file']['skt/kobert-base-v1']
+        sp_model_path = self.tokenizer.vocab_file
         sp = spm.SentencePieceProcessor()
         sp.Load(sp_model_path)
 
-        # 새로운 서브워드 추가
-        new_vocab_size = len(sp) + len(self.tf_idf_words)
+        # 기존 모델에 새로운 단어 추가
         with open('tf_idf_words.txt', 'w') as f:
             for word in self.tf_idf_words:
                 f.write(f"{word}\n")
 
+        new_vocab_size = len(sp) + len(self.tf_idf_words)
         spm.SentencePieceTrainer.Train(
-            f'--input=tf_idf_words.txt --model_prefix=new_vocab --vocab_size={new_vocab_size} --user_defined_symbols={",".join(self.tf_idf_words)}'
+            f'--input=tf_idf_words.txt --model_prefix=new_sp_model --vocab_size={new_vocab_size} --user_defined_symbols={",".join(self.tf_idf_words)}'
         )
 
         # 새롭게 생성된 SentencePiece 모델 로드
         new_sp = spm.SentencePieceProcessor()
-        new_sp.Load('new_vocab.model')
+        new_sp.Load('new_sp_model.model')
         self.tokenizer.sp = new_sp
+        self.tokenizer.vocab_file = 'new_sp_model.model'
 
     def forward(self, input_ids, attention_mask, labels=None):
         raise NotImplementedError("Each subclass must implement this method.")
@@ -165,4 +111,3 @@ class DORNEModel(EmbeddingEnhancedModel):
         logits = outputs.logits
         loss = outputs.loss if labels is not None else None
         return loss, logits
-    
