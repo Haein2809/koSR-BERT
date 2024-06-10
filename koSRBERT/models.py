@@ -139,22 +139,25 @@ class koSRBERT(nn.Module):
         )
         self.final_classifier = nn.Linear(hidden_size * 3, 2)  # 이진 분류를 위해 출력 크기 2로 설정
 
-    def forward(self, input_ids, attention_mask, role_ids, orders, masked_indices=None, order_labels=None, target_ids=None):
+    def forward(self, input_ids, attention_mask, role_ids, orders, sr_labels=None, masked_indices=None, order_labels=None, target_ids=None):
         batch_size, num_orders, seq_len = input_ids.size()
         input_ids = input_ids.view(batch_size * num_orders, seq_len)
         attention_mask = attention_mask.view(batch_size * num_orders, seq_len)
         role_ids = role_ids.view(batch_size * num_orders)
-        
+
         if target_ids is not None:
             target_ids = target_ids.view(batch_size * num_orders, seq_len)
 
         if order_labels is not None:
             order_labels = order_labels.view(batch_size * num_orders)
-        
+
+        if sr_labels is not None:
+            sr_labels = sr_labels.view(batch_size * num_orders)
+
         token_embeddings = self.bert.embeddings(input_ids)
         role_embeddings = self.role_embeddings(role_ids).unsqueeze(1).expand_as(token_embeddings)
         combined_embeddings = token_embeddings + role_embeddings
-        
+
         outputs = self.bert(inputs_embeds=combined_embeddings, attention_mask=attention_mask)
         sequence_output = outputs.last_hidden_state.view(batch_size, num_orders, seq_len, -1)[:, :, 0, :]
 
@@ -163,7 +166,7 @@ class koSRBERT(nn.Module):
 
         # MUR loss and logits
         mur_loss, mur_logits = self.mur(input_ids=input_ids, attention_mask=attention_mask, masked_indices=masked_indices, labels=target_ids)
-        
+
         # DORN loss and logits
         dorn_loss, dorn_logits = self.dorn(input_ids=input_ids, attention_mask=attention_mask, labels=order_labels)
 
@@ -172,11 +175,15 @@ class koSRBERT(nn.Module):
         dorn_cls_logits = dorn_logits.view(batch_size, num_orders, -1)[:, 0, :]
 
         combined_outputs = torch.cat((nug_cls_logits, mur_cls_logits, dorn_cls_logits), dim=2)
-        
+
         context_output = self.context_encoder(combined_outputs)
-        
+
         final_logits = self.final_classifier(context_output)
         final_probs = F.softmax(final_logits, dim=-1)  # 소프트맥스 적용
+
+        if sr_labels is not None:
+            total_loss = self.compute_loss(final_probs, sr_labels, orders, nug_loss, mur_loss, dorn_loss)
+            return final_probs, total_loss, nug_loss, mur_loss, dorn_loss
 
         return final_probs, nug_loss, mur_loss, dorn_loss
 
@@ -184,7 +191,7 @@ class koSRBERT(nn.Module):
         loss_fct = nn.CrossEntropyLoss()
         logits = logits.view(-1, 2)  # 이진 분류를 위해 2로 설정
         sr_labels = sr_labels.view(-1)
-        
+
         # CrossEntropyLoss 적용
         loss = loss_fct(logits, sr_labels)
 
