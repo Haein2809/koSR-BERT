@@ -15,13 +15,13 @@
 
 
 ### koBERT_task
-- `models.py`: ko-BERT 사용한 NUG, MUR, DORN 모델 정의
-- `dataset.py`: NUG, MUR, DORN 모델의 데이터셋 정의
+- `models.py`: ko-BERT 사용한 NUG, MUR, DORN 모델 정의 (초기 버전)
+- `dataset.py`: NUG, MUR, DORN 모델의 데이터셋 정의 (초기 버전)
 
   
 ### koSRBERT
-- `models.py`: koSR-BERT 구축에 사용한 수정된 NUG, MUR, DORN 모델 및 koSRBERT 정의
-- `dataset.py`: koSRBERT 모델의 데이터셋 정의
+- `models.py`: koSR-BERT 구축에 사용한 수정된 NUG, MUR, DORN 모델 및 koSRBERT 정의 (통합 버전)
+- `dataset.py`: koSRBERT 모델의 데이터셋 정의 (통합 버전)
 
 
 
