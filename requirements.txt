@@ -1,0 +1,7 @@
+numpy==1.23.1
+mxnet==1.9.1
+gluonnlp==0.8.0
+sentencepiece==0.1.99
+transformers==4.41.2
+torch==2.3.0+cu121
+kobert_tokenizer @ git+https://github.com/SKTBrain/KoBERT.git#egg=kobert_tokenizer&subdirectory=kobert_hf
