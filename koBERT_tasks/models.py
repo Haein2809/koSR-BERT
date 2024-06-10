@@ -144,8 +144,8 @@ class MUREModel(EmbeddingEnhancedModel):
 class DORNEModel(EmbeddingEnhancedModel):
     def __init__(self, model_name, num_labels, tf_idf_words):
         super(DORNEModel, self).__init__(model_name, tf_idf_words)
-        self.config = BertConfig.from_pretrained(model_name, num_labels=num_labels)
-        self.bert = BertForSequenceClassification.from_pretrained(model_name, config=self.config)
+        # self.config = BertConfig.from_pretrained(model_name, num_labels=num_labels)
+        # self.bert = BertForSequenceClassification.from_pretrained(model_name, config=self.config)
 
     def initialize_bert(self, model_name):
         return BertForSequenceClassification.from_pretrained(model_name)
