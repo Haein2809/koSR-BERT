@@ -5,6 +5,8 @@ from transformers import BertModel, BertForMaskedLM, BertForSequenceClassificati
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
 
+
+
 class NUGModel(torch.nn.Module):
     def __init__(self, model_name, num_labels):
         super(NUGModel, self).__init__()
@@ -34,6 +36,9 @@ class NUGModel(torch.nn.Module):
         return loss, logits
 
 
+
+
+
 class MURModel(nn.Module):
     def __init__(self, model_name):
         super(MURModel, self).__init__()
@@ -54,6 +59,9 @@ class MURModel(nn.Module):
             active_labels = labels[masked_indices]
             loss = self.loss_fct(active_logits.view(-1, self.bert.config.vocab_size), active_labels.view(-1))
         return loss, logits
+
+
+
 
 class DORNModel(nn.Module):
     def __init__(self, model_name, num_labels):
@@ -78,6 +86,44 @@ class DORNModel(nn.Module):
             loss = self.loss_fct(log_probs, true_probs)
 
         return loss, logits
+
+
+
+
+import torch.nn as nn
+
+class RoleEmbeddings(nn.Module):
+    def __init__(self, role_vocab_size, hidden_size):
+        super(RoleEmbeddings, self).__init__()
+        self.role_embeddings = nn.Embedding(role_vocab_size, hidden_size)
+
+    def forward(self, role_ids):
+        return self.role_embeddings(role_ids)
+
+
+
+
+
+from transformers import BertModel
+
+class ContextEncoder(nn.Module):
+    def __init__(self, model_name, hidden_size, num_layers, num_attention_heads):
+        super(ContextEncoder, self).__init__()
+        self.bert = BertModel.from_pretrained(model_name)
+        self.hidden_size = hidden_size
+
+    def forward(self, input_sequences):
+        # input_sequences should include [CLS] tokens already
+        attention_mask = (input_sequences != self.bert.config.pad_token_id).long()
+
+        outputs = self.bert(input_sequences, attention_mask=attention_mask)
+        cls_output = outputs.last_hidden_state[:, 0, :]  # Extract the [CLS] token's output
+
+        return cls_output
+
+
+
+
 
 class koSRBERT(nn.Module):
     def __init__(self, model_name, nug, mur, dorn, hidden_size, num_layers, num_attention_heads, role_vocab_size=2):
