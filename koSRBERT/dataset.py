@@ -1,3 +1,8 @@
+import torch
+from torch.utils.data import Dataset
+from transformers import BertTokenizer
+import pandas as pd
+
 class koSRBERTDataset(Dataset):
     def __init__(self, dataframe, tokenizer, max_len, max_order, text_col, role_col, order_col, session_col, class_col, mask_prob=0.15):
         self.dataframe = dataframe
