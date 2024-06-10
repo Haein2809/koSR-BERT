@@ -1,3 +1,10 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from transformers import BertModel, BertForMaskedLM, BertForSequenceClassification, BertConfig
+from torch.optim import AdamW
+from torch.utils.data import DataLoader, Dataset
+
 class NUGModel(torch.nn.Module):
     def __init__(self, model_name, num_labels):
         super(NUGModel, self).__init__()
