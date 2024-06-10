@@ -5,8 +5,7 @@
 
 
 ## 참고 문헌
-- doi: 10.18653/v1/2023.findings-eacl.184
-- 링크: https://doi.org/10.18653/v1/2023.findings-eacl.184
+- https://doi.org/10.18653/v1/2023.findings-eacl.184
 
 
 
