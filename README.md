@@ -14,19 +14,15 @@
 - `requirements.txt`: 필요한 패키지 목록
 - `README.md`: 프로젝트 설명 및 사용법
 
-  
-  
+
 ### koBERT_task
 - `models.py`: ko-BERT 사용한 NUG, MUR, DORN 모델 정의
 - `dataset.py`: NUG, MUR, DORN 모델의 데이터셋 정의
 
   
-
 ### koSRBERT
 - `models.py`: koSR-BERT 구축에 사용한 수정된 NUG, MUR, DORN 모델 및 koSRBERT 정의
 - `dataset.py`: koSRBERT 모델의 데이터셋 정의
-- `models.py`: koSRBERT 모델 및 관련 태스크 모델(NUG, MUR, DORN) 정의
-- `dataset.py`: 데이터셋 정의 및 전처리 코드
 
 
 
