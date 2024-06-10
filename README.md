@@ -59,7 +59,6 @@ pip install -r requirements.txt
 - order: 채팅 순서
 - session: 세션 ID
 - class: SR 또는 non-SR 클래스 분류 값
-- dataset.py 파일을 사용하여 데이터셋을 전처리하고 로드합니다.
 
 
 
